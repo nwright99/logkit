@@ -1,0 +1,12 @@
+[project]
+name = "logkit"
+version = "0.1.0"
+description = "Parse, filter, and tally plain-text log files."
+requires-python = ">=3.9"
+
+[project.scripts]
+logkit = "logkit.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
