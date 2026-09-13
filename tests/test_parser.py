@@ -66,5 +66,43 @@ class RawFieldTests(unittest.TestCase):
         self.assertEqual(entry.raw, "2026-09-06T12:34:56 INFO ok")
 
 
+class JsonLineTests(unittest.TestCase):
+    def test_iso_timestamp_and_level_fields(self):
+        entry = parse_line(
+            '{"timestamp": "2026-09-06T12:34:56", "level": "error", "msg": "boom"}'
+        )
+        self.assertEqual(entry.timestamp, datetime(2026, 9, 6, 12, 34, 56))
+        self.assertEqual(entry.level, "ERROR")
+
+    def test_z_suffix_timestamp_is_treated_as_naive(self):
+        entry = parse_line('{"time": "2026-09-06T12:34:56Z", "level": "INFO"}')
+        self.assertEqual(entry.timestamp, datetime(2026, 9, 6, 12, 34, 56))
+
+    def test_epoch_timestamp(self):
+        entry = parse_line('{"ts": 0, "level": "DEBUG"}')
+        self.assertEqual(entry.timestamp, datetime.fromtimestamp(0))
+
+    def test_alternate_level_key_and_warn_normalization(self):
+        entry = parse_line('{"levelname": "warn", "message": "disk almost full"}')
+        self.assertEqual(entry.level, "WARNING")
+
+    def test_missing_fields_fall_back_to_text_parsing(self):
+        entry = parse_line('{"message": "2026-09-06T12:34:56 ERROR boom"}')
+        self.assertEqual(entry.timestamp, datetime(2026, 9, 6, 12, 34, 56))
+        self.assertEqual(entry.level, "ERROR")
+
+    def test_non_string_field_values_fall_back_to_text_parsing(self):
+        entry = parse_line(
+            '{"level": 3, "message": "2026-09-06T12:34:56 ERROR boom"}'
+        )
+        self.assertEqual(entry.timestamp, datetime(2026, 9, 6, 12, 34, 56))
+        self.assertEqual(entry.level, "ERROR")
+
+    def test_curly_brace_text_that_is_not_valid_json_falls_back(self):
+        entry = parse_line("{not json} 2026-09-06T12:34:56 INFO ok")
+        self.assertEqual(entry.timestamp, datetime(2026, 9, 6, 12, 34, 56))
+        self.assertEqual(entry.level, "INFO")
+
+
 if __name__ == "__main__":
     unittest.main()

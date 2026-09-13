@@ -62,8 +62,20 @@ and classic syslog timestamps (which have no year, so the current
 year is assumed). If it can't find a timestamp or level, the
 corresponding field is `None` rather than a guess.
 
+Lines that look like a JSON object are parsed as one: it looks for a
+timestamp under `timestamp`, `time`, `ts`, or `@timestamp`, and a
+level under `level`, `levelname`, `loglevel`, or `severity`, in that
+order. Timestamps can be ISO 8601 strings or epoch numbers. If the
+JSON object doesn't have those fields, or the line isn't valid JSON,
+it falls back to the same text-based detection used for plain lines.
+
 ## Status
 
 Early. The timestamp and level detection covers the formats I run
-into most often, not every format that exists. See the roadmap for
-what's planned next.
+into most often, not every format that exists.
+
+Planned next, roughly in order:
+
+- histogram command bucketing counts by time interval
+- let `grep` read from stdin for piping
+- `--format` option to control `tally` output (json/table)
