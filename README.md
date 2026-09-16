@@ -46,6 +46,19 @@ $ logkit grep app.log --match "connection (reset|refused)"
 $ logkit tally app.log.2.gz
 ```
 
+Count lines per time bucket:
+
+```
+$ logkit histogram app.log --interval 15m
+2026-09-06 03:00  41
+2026-09-06 03:15  58
+2026-09-06 03:30  23
+```
+
+`--interval` takes a number plus a unit (`s`, `m`, `h`, `d`) and
+defaults to `1h`. Lines with no detectable timestamp are counted
+separately under `(no timestamp)` rather than dropped.
+
 ## Library usage
 
 ```python
@@ -76,6 +89,5 @@ into most often, not every format that exists.
 
 Planned next, roughly in order:
 
-- histogram command bucketing counts by time interval
 - let `grep` read from stdin for piping
 - `--format` option to control `tally` output (json/table)
