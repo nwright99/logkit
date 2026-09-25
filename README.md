@@ -40,6 +40,13 @@ $ logkit grep app.log --since 2026-09-06T00:00:00 --until 2026-09-06T06:00:00
 $ logkit grep app.log --match "connection (reset|refused)"
 ```
 
+`grep` also reads from stdin when the path is `-`, so it works at the
+end of a pipe:
+
+```
+$ tail -f app.log | logkit grep - --level ERROR
+```
+
 `.gz` files work the same way as plain text:
 
 ```
@@ -89,5 +96,4 @@ into most often, not every format that exists.
 
 Planned next, roughly in order:
 
-- let `grep` read from stdin for piping
 - `--format` option to control `tally` output (json/table)

@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
+from io import StringIO
+from unittest import mock
 import unittest
 
-from logkit.cli import bucket_start, parse_interval
+from logkit.cli import bucket_start, iter_lines, parse_interval
 
 
 class ParseIntervalTests(unittest.TestCase):
@@ -50,6 +52,13 @@ class BucketStartTests(unittest.TestCase):
     def test_sub_minute_interval(self):
         ts = datetime(2026, 9, 6, 14, 37, 12)
         self.assertEqual(bucket_start(ts, timedelta(seconds=30)), datetime(2026, 9, 6, 14, 37, 0))
+
+
+class IterLinesStdinTests(unittest.TestCase):
+    def test_dash_reads_from_stdin(self):
+        fake_stdin = StringIO("one\ntwo\n")
+        with mock.patch("logkit.cli.sys.stdin", fake_stdin):
+            self.assertEqual(list(iter_lines("-")), ["one\n", "two\n"])
 
 
 if __name__ == "__main__":

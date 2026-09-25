@@ -4,6 +4,7 @@
     logkit grep access.log --level ERROR
     logkit grep access.log --since 2026-09-06T00:00:00 --match timeout
     logkit histogram access.log --interval 1h
+    tail -f access.log | logkit grep - --level ERROR
 """
 from __future__ import annotations
 
@@ -23,6 +24,10 @@ _EPOCH = datetime(1970, 1, 1)
 
 
 def iter_lines(path: str) -> Iterator[str]:
+    if path == "-":
+        for line in sys.stdin:
+            yield line
+        return
     opener = gzip.open if path.endswith(".gz") else open
     with opener(path, "rt", errors="replace") as handle:
         for line in handle:
@@ -126,7 +131,9 @@ def build_parser() -> argparse.ArgumentParser:
     tally.set_defaults(func=cmd_tally)
 
     grep = sub.add_parser("grep", help="filter log lines")
-    grep.add_argument("path", help="log file to read (.gz is handled transparently)")
+    grep.add_argument(
+        "path", help="log file to read (.gz is handled transparently), or - for stdin"
+    )
     grep.add_argument("--level", help="only show this level, e.g. ERROR")
     grep.add_argument("--match", help="only show lines matching this regex")
     grep.add_argument("--since", help="only show lines at or after this ISO timestamp")
