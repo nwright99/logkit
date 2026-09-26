@@ -1,6 +1,7 @@
 """Command-line interface for logkit.
 
     logkit tally access.log
+    logkit tally access.log --format json
     logkit grep access.log --level ERROR
     logkit grep access.log --since 2026-09-06T00:00:00 --match timeout
     logkit histogram access.log --interval 1h
@@ -10,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import json
 import re
 import sys
 from collections import Counter
@@ -49,9 +51,23 @@ def cmd_tally(args: argparse.Namespace) -> int:
             counts[entry.level] += 1
         else:
             unclassified += 1
-    for level in ("CRITICAL", "FATAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE"):
-        if counts[level]:
-            print(f"{level:<9} {counts[level]}")
+
+    levels = [
+        level
+        for level in ("CRITICAL", "FATAL", "ERROR", "WARNING", "INFO", "DEBUG", "TRACE")
+        if counts[level]
+    ]
+
+    if args.format == "json":
+        payload = {level: counts[level] for level in levels}
+        if unclassified:
+            payload["(none)"] = unclassified
+        payload["total"] = total
+        print(json.dumps(payload))
+        return 0
+
+    for level in levels:
+        print(f"{level:<9} {counts[level]}")
     if unclassified:
         print(f"{'(none)':<9} {unclassified}")
     print(f"{'total':<9} {total}")
@@ -128,6 +144,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     tally = sub.add_parser("tally", help="count log lines by level")
     tally.add_argument("path", help="log file to read (.gz is handled transparently)")
+    tally.add_argument(
+        "--format",
+        choices=("table", "json"),
+        default="table",
+        help="output format (default: table)",
+    )
     tally.set_defaults(func=cmd_tally)
 
     grep = sub.add_parser("grep", help="filter log lines")

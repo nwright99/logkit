@@ -1,9 +1,12 @@
+import argparse
+import json
+import tempfile
 from datetime import datetime, timedelta
 from io import StringIO
 from unittest import mock
 import unittest
 
-from logkit.cli import bucket_start, iter_lines, parse_interval
+from logkit.cli import bucket_start, cmd_tally, iter_lines, parse_interval
 
 
 class ParseIntervalTests(unittest.TestCase):
@@ -52,6 +55,38 @@ class BucketStartTests(unittest.TestCase):
     def test_sub_minute_interval(self):
         ts = datetime(2026, 9, 6, 14, 37, 12)
         self.assertEqual(bucket_start(ts, timedelta(seconds=30)), datetime(2026, 9, 6, 14, 37, 0))
+
+
+class TallyFormatTests(unittest.TestCase):
+    def _run(self, lines, fmt):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as handle:
+            handle.write("\n".join(lines) + "\n")
+            path = handle.name
+        args = argparse.Namespace(path=path, format=fmt)
+        with mock.patch("sys.stdout", new_callable=StringIO) as out:
+            cmd_tally(args)
+        return out.getvalue()
+
+    def test_table_is_default_output(self):
+        output = self._run(
+            ["2026-09-06 03:14:07 ERROR boom", "2026-09-06 03:14:08 INFO ok"], "table"
+        )
+        self.assertIn("ERROR     1", output)
+        self.assertIn("total     2", output)
+
+    def test_json_output_is_valid_and_matches_counts(self):
+        output = self._run(
+            ["2026-09-06 03:14:07 ERROR boom", "2026-09-06 03:14:08 ERROR boom again"], "json"
+        )
+        payload = json.loads(output)
+        self.assertEqual(payload["ERROR"], 2)
+        self.assertEqual(payload["total"], 2)
+
+    def test_json_output_includes_unclassified(self):
+        output = self._run(["no level or timestamp here"], "json")
+        payload = json.loads(output)
+        self.assertEqual(payload["(none)"], 1)
+        self.assertEqual(payload["total"], 1)
 
 
 class IterLinesStdinTests(unittest.TestCase):

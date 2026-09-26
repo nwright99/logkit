@@ -32,6 +32,13 @@ INFO      930
 total     989
 ```
 
+Add `--format json` for machine-readable output:
+
+```
+$ logkit tally app.log --format json
+{"ERROR": 12, "WARNING": 47, "INFO": 930, "total": 989}
+```
+
 Filter by level, time range, or a regex, in any combination:
 
 ```
@@ -96,4 +103,4 @@ into most often, not every format that exists.
 
 Planned next, roughly in order:
 
-- `--format` option to control `tally` output (json/table)
+- `--level` filter for `histogram`, so you can chart just one level over time
