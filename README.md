@@ -73,6 +73,15 @@ $ logkit histogram app.log --interval 15m
 defaults to `1h`. Lines with no detectable timestamp are counted
 separately under `(no timestamp)` rather than dropped.
 
+Add `--level` to count only one level, which gives you errors over
+time without a `grep` in front:
+
+```
+$ logkit histogram app.log --interval 1h --level ERROR
+2026-09-06 03:00  4
+2026-09-06 04:00  1
+```
+
 ## Library usage
 
 ```python
@@ -103,4 +112,5 @@ into most often, not every format that exists.
 
 Planned next, roughly in order:
 
-- `--level` filter for `histogram`, so you can chart just one level over time
+- `--format json` for `grep` output
+- config file for custom level aliases

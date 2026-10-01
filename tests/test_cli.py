@@ -6,7 +6,7 @@ from io import StringIO
 from unittest import mock
 import unittest
 
-from logkit.cli import bucket_start, cmd_tally, iter_lines, parse_interval
+from logkit.cli import bucket_start, cmd_histogram, cmd_tally, iter_lines, parse_interval
 
 
 class ParseIntervalTests(unittest.TestCase):
@@ -87,6 +87,46 @@ class TallyFormatTests(unittest.TestCase):
         payload = json.loads(output)
         self.assertEqual(payload["(none)"], 1)
         self.assertEqual(payload["total"], 1)
+
+
+class HistogramLevelTests(unittest.TestCase):
+    def _run(self, lines, level):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as handle:
+            handle.write("\n".join(lines) + "\n")
+            path = handle.name
+        args = argparse.Namespace(path=path, interval=timedelta(hours=1), level=level)
+        with mock.patch("sys.stdout", new_callable=StringIO) as out:
+            cmd_histogram(args)
+        return out.getvalue()
+
+    LINES = [
+        "2026-09-06 03:14:07 ERROR boom",
+        "2026-09-06 03:20:00 INFO ok",
+        "2026-09-06 04:01:00 ERROR again",
+        "2026-09-06 04:02:00 ERROR and again",
+        "ERROR with no timestamp",
+        "INFO with no timestamp",
+    ]
+
+    def test_no_level_counts_everything(self):
+        output = self._run(self.LINES, None)
+        self.assertIn("2026-09-06 03:00  2", output)
+        self.assertIn("2026-09-06 04:00  2", output)
+        self.assertIn("(no timestamp)  2", output)
+
+    def test_level_filters_buckets(self):
+        output = self._run(self.LINES, "ERROR")
+        self.assertIn("2026-09-06 03:00  1", output)
+        self.assertIn("2026-09-06 04:00  2", output)
+
+    def test_level_is_case_insensitive(self):
+        self.assertEqual(self._run(self.LINES, "error"), self._run(self.LINES, "ERROR"))
+
+    def test_level_limits_unclassified_count(self):
+        output = self._run(self.LINES, "INFO")
+        self.assertIn("2026-09-06 03:00  1", output)
+        self.assertNotIn("2026-09-06 04:00", output)
+        self.assertIn("(no timestamp)  1", output)
 
 
 class IterLinesStdinTests(unittest.TestCase):

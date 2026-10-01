@@ -5,6 +5,7 @@
     logkit grep access.log --level ERROR
     logkit grep access.log --since 2026-09-06T00:00:00 --match timeout
     logkit histogram access.log --interval 1h
+    logkit histogram access.log --interval 15m --level ERROR
     tail -f access.log | logkit grep - --level ERROR
 """
 from __future__ import annotations
@@ -106,7 +107,12 @@ def cmd_histogram(args: argparse.Namespace) -> int:
     interval = args.interval
     counts: Counter = Counter()
     unclassified = 0
+    level = args.level.upper() if args.level else None
     for entry in iter_log_lines(args.path):
+        # Filter before the timestamp check so the "(no timestamp)" count
+        # only covers lines of the requested level.
+        if level and entry.level != level:
+            continue
         if entry.timestamp is None:
             unclassified += 1
             continue
@@ -170,6 +176,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=timedelta(hours=1),
         help="bucket width, e.g. 30s, 15m, 1h, 1d (default: 1h)",
     )
+    histogram.add_argument("--level", help="only count this level, e.g. ERROR")
     histogram.set_defaults(func=cmd_histogram)
 
     return parser
